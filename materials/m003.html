@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <link rel="stylesheet" href="../main.css">
+        <script src="https://code.jquery.com/jquery-3.7.0.js"></script>      
+    </head>
+
+    <header>
+        <h1>Study Buddy</h1>
+        <p>UNT Course Material for Students</p>
+    </header>
+
+    <body>
+        <div class="topnav">
+            <a href="../index.html">Home</a>
+            <a href="../upload.html">Upload</a>
+            <a href="../contact.html">Contact</a>
+            <a href="../about_us.html">About Us</a>
+            <a href="#" style="float:right">Logout</a>
+        </div>
+
+        <div class="rightcolumn">
+            <div class="card">
+                <!-- <p><span id="pageName"></span></p><br> -->
+
+                <div class="paragraph-left"><h2><span id="courseName"></span></div> 
+                <div class="paragraph-left"><h2><span id="materialName"></span></div>
+                
+                <div class="paragraph-left">Status: <span id="status"></span></div>
+                <div class="paragraph-left">Type: <span id="materialType"></span></div>
+                <div class="paragraph-left">Uploaded by <span id="uploader"></span> on <span id="uploadDate"></span>.</div><br>
+                
+                <!-- Used to test displayMaterialContent. -->
+                <!-- <div class="paragraph-left"><span id="testTestTest"></span></div> -->
+                
+                <div class="displayContent"></div>
+                
+                
+            </div>
+        </div>
+        
+        <script type="module">
+            // Import method used: https://firebase.google.com/docs/web/alt-setup#from-the-cdn
+            import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js'
+            import { getAuth } from 'https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js'
+            import { child, get, getDatabase, onValue, ref, set } from 'https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js'
+
+            // See: https://firebase.google.com/docs/web/learn-more#config-object
+            const firebaseConfig = {
+              apiKey: "AIzaSyBLZ2TYsE8R3UthJtcDBAaF_jBpy_nQ6AQ",
+              authDomain: "study-buddy-4a942.firebaseapp.com",
+              databaseURL: "https://study-buddy-4a942-default-rtdb.firebaseio.com",
+              projectId: "study-buddy-4a942",
+              storageBucket: "study-buddy-4a942.appspot.com",
+              messagingSenderId: "838565234860",
+              appId: "1:838565234860:web:18b70bd110e7b503727709"
+            };
+            const app = initializeApp(firebaseConfig);
+
+            // Initialize Realtime Database and get a reference to the service
+            const database = getDatabase(app);
+
+            // Returns the name of the current file with no extension.  Used to call database
+            // entries since materials filenames match with database IDs.
+            function getPageName() {
+                var path = window.location.pathname;
+                var page = path.split("/").pop();
+                if (page.split(".").pop() === "html") {
+                    page = page.split(".").at(0);
+                }
+                return page;
+            }
+            
+            
+            // Adds HTML content to display a materials file read from the database.  Adds different
+            // HTML content based on the file type of the 
+            function displayMaterialContent(entry, materialType) {
+                onValue(ref(database, entry + '/content'), (snapshot) => {
+                    var contentURL = snapshot.val();
+                    var extension = contentURL.split(".").pop();
+                    
+                    // FIXME this line should be removed once material embedding works.
+                    $('.displayContent').append('<div class="paragraph-left">Material URL: ' + contentURL + '</div>' +
+                        '<br><div class="paragraph-left">Embedded content coming soon.</div>');
+                    
+                    // FIXME Will probably need code that gets embed links.
+/*                        if (materialType == "video") {
+                        $('.displayContent').append('<iframe width="800" height="600" src="' + contentURL + 
+                            '" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>');
+                        extension = "";
+                    }                        
+*/                        
+                    // FIXME This pdf block works for normal URLs, but I'm storing material files in Firebase storage, and it uses
+                    // special URLs that I haven't figured out how to convert into normal ones yet.
+/*                        if (extension === "pdf") {
+                        document.getElementById("testTestTest").innerHTML = "PDF test";
+                        $('.displayContent').append('<object data="' + contentURL + '" width="900" height="750"></object>');
+                    }
+*/
+                    
+                    /*  // FIXME Reading txt file.  Requires messing with Firebase's CORS settings.
+                    if (extension === "txt") {
+                        var readText = "";
+                        fetch(contentURL)
+                           .then( read => read.text() )
+                           .then( text =>  )
+                    
+                        document.getElementById("testTestTest").innerHTML = "TXT test";
+                        $('.displayContent').append('');
+                    }
+                    */
+                                            
+                    // TODO Implement HTML for other file types.  
+                    // Implement identification of youtube and other non-cloud storage URLs.
+                    
+                })
+                
+            }
+            
+            // Populates text fields with data from database values.
+            function populateMaterialInfo() {
+                // Gets the name of the currently running HTML file then calls the database entry
+                // which matches that name.
+                const pageName = getPageName();
+//                    document.getElementById("pageName").innerHTML = pageName;                
+                var entry = 'materials/' + pageName + '/';
+
+                // Uses the database entry's values to populate text fields.
+                onValue(ref(database, entry + '/course'), (snapshot) => {
+                    document.getElementById("courseName").innerHTML = snapshot.val();
+                })
+                onValue(ref(database, entry + '/name'), (snapshot) => {
+                    document.getElementById("materialName").innerHTML = snapshot.val();
+                })
+                onValue(ref(database, entry + '/status'), (snapshot) => {
+                    var status = snapshot.val();
+                    status = status.charAt(0).toUpperCase() + status.slice(1);
+                    document.getElementById("status").innerHTML = status;
+                })
+                var materialType = "";
+                onValue(ref(database, entry + '/type'), (snapshot) => {
+                    document.getElementById("materialType").innerHTML = snapshot.val();
+                    materialType = snapshot.val();
+                })
+                onValue(ref(database, entry + '/uploadDate'), (snapshot) => {
+                    document.getElementById("uploadDate").innerHTML = snapshot.val();
+                })
+                onValue(ref(database, entry + '/uploader'), (snapshot) => {
+                    document.getElementById("uploader").innerHTML = snapshot.val();
+                })
+            
+                displayMaterialContent(entry, materialType);
+            }
+            populateMaterialInfo();
+            
+            
+    
+        </script>
+
+
+        
+    </body>
+
+    <footer>
+        <h4>Footer</h4>
+    </footer>
+
+</html>
